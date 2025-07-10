@@ -1,0 +1,6 @@
+django
+djangorestframework
+psycopg2-binary
+web3
+python-decouple
+cryptography
