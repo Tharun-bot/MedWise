@@ -1,9 +1,10 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Appointment, Patient, Doctor
-from .serializers import AppointmentSerializer, PatientSerializer, DoctorSerializer
+from .models import Appointment, Patient, Doctor, AccessControl, MedicalRecord
+from .serializers import AppointmentSerializer, PatientSerializer, DoctorSerializer, MessageSerializer, MedicalRecordSerializer
 # from contracts.utils import create_appointment_onchain  # <-- add this later
+import uuid  # for mock CID
 
 @api_view(['GET'])
 def get_appointments(request):
@@ -105,4 +106,61 @@ def list_doctors(request):
     doctors = Doctor.objects.all()
     serializer = DoctorSerializer(doctors, many=True)
     return Response(serializer.data)
+
+@api_view(['POST'])
+def send_message(request):
+    serializer = MessageSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Message sent", "data": serializer.data}, status=201)
+    return Response(serializer.errors, status=400)
+
+@api_view(['POST'])
+def grant_access(request):
+    try:
+        patient_id = request.data['patient_id']
+        doctor_id = request.data['doctor_id']
+
+        access, created = AccessControl.objects.get_or_create(
+            patient_id=patient_id,
+            doctor_id=doctor_id
+        )
+
+        if created:
+            return Response({"message": "Access granted successfully."}, status=201)
+        else:
+            return Response({"message": "Access already exists."}, status=200)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+@api_view(['POST'])
+def upload_medical_record(request):
+    try:
+        patient_id = request.data.get('patient_id')
+        file = request.FILES.get('file')
+        description = request.data.get('description', '')
+
+        if not file:
+            return Response({"error": "No file uploaded."}, status=400)
+
+        # 📦 TODO: Replace this with actual IPFS upload
+        # For now, generate a mock CID
+        fake_cid = f"Qm{uuid.uuid4().hex[:44]}"
+
+        record = MedicalRecord.objects.create(
+            patient_id=patient_id,
+            ipfs_cid=fake_cid,
+            description=description
+        )
+
+        serializer = MedicalRecordSerializer(record)
+        return Response({"message": "Uploaded", "data": serializer.data}, status=201)
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+
+
+
 
