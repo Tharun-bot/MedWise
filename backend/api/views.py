@@ -14,25 +14,31 @@ def get_appointments(request):
 @api_view(['POST'])
 def book_appointment(request):
     try:
+        # validate that patient & doctor exist
         patient = Patient.objects.get(id=request.data['patient_id'])
         doctor = Doctor.objects.get(id=request.data['doctor_id'])
-        symptoms = request.data['symptoms']
-        datetime = request.data['datetime']
 
-        # tx_hash = create_appointment_onchain(...)  # placeholder
+        data = {
+            "patient": patient.id,
+            "doctor": doctor.id,
+            "symptoms": request.data["symptoms"],
+            "datetime": request.data["datetime"],
+            "status": "pending"
+        }
 
-        appointment = Appointment.objects.create(
-            patient=patient,
-            doctor=doctor,
-            symptoms=symptoms,
-            datetime=datetime,
-            status='pending'
-        )
-        serializer = AppointmentSerializer(appointment)
-        return Response({"message": "Booked", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        serializer = AppointmentSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Booked", "data": serializer.data}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=404)
+    except Doctor.DoesNotExist:
+        return Response({"error": "Doctor not found"}, status=404)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['POST'])
 def approve_appointment(request, id):
