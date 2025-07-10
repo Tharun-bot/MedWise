@@ -2,7 +2,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Appointment, Patient, Doctor
-from .serializers import AppointmentSerializer
+from .serializers import AppointmentSerializer, PatientSerializer, DoctorSerializer
 # from contracts.utils import create_appointment_onchain  # <-- add this later
 
 @api_view(['GET'])
@@ -53,3 +53,50 @@ def reject_appointment(request, id):
         return Response({"message": "Appointment rejected"})
     except Appointment.DoesNotExist:
         return Response({"error": "Not found"}, status=404)
+
+@api_view(['POST'])
+def register_patient(request):
+    serializer = PatientSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Patient registered", "data": serializer.data}, status=201)
+    return Response(serializer.errors, status=400)
+
+@api_view(['GET'])
+def get_patient(request, id):
+    try:
+        patient = Patient.objects.get(id=id)
+        serializer = PatientSerializer(patient)
+        return Response(serializer.data)
+    except Patient.DoesNotExist:
+        return Response({"error": "Patient not found"}, status=404)
+
+@api_view(['GET'])
+def list_patients(request):
+    patients = Patient.objects.all()
+    serializer = PatientSerializer(patients, many=True)
+    return Response(serializer.data)
+
+@api_view(['POST'])
+def register_doctor(request):
+    serializer = DoctorSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({"message": "Doctor registered", "data": serializer.data}, status=201)
+    return Response(serializer.errors, status=400)
+
+@api_view(['GET'])
+def get_doctor(request, id):
+    try:
+        doctor = Doctor.objects.get(id=id)
+        serializer = DoctorSerializer(doctor)
+        return Response(serializer.data)
+    except Doctor.DoesNotExist:
+        return Response({"error": "Doctor not found"}, status=404)
+
+@api_view(['GET'])
+def list_doctors(request):
+    doctors = Doctor.objects.all()
+    serializer = DoctorSerializer(doctors, many=True)
+    return Response(serializer.data)
+
